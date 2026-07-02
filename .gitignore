@@ -14,6 +14,7 @@ __pycache__/
 # Data
 data/
 data_64x64/
+data_128x128/
 
 # Model Checkpoints
 *.pth

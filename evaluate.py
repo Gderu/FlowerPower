@@ -12,7 +12,7 @@ def evaluate(checkpoint_path=None, num_images=4):
     
     # Find latest checkpoint if none specified
     if checkpoint_path is None:
-        checkpoints = glob.glob("netG_epoch_*.pth")
+        checkpoints = glob.glob("checkpoints/128/netG_epoch_*.pth")
         if not checkpoints:
             print("No generator checkpoints found!")
             return
@@ -32,14 +32,14 @@ def evaluate(checkpoint_path=None, num_images=4):
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
     ])
-    dataset = ImageDataset(directory='data_64x64', transform=transform)
+    dataset = ImageDataset(directory='data_128x128', transform=transform)
     dataloader = DataLoader(dataset, batch_size=num_images, shuffle=True)
     
     # 3. Get a batch of images
     real_imgs = next(iter(dataloader)).to(device)
     
     # 4. Generate masks and inputs
-    masks = get_quadrant_mask(num_images, 64, 64, device)
+    masks = get_quadrant_mask(num_images, 128, 128, device)
     masked_imgs = real_imgs * (1.0 - masks)
     g_in = torch.cat((masked_imgs, masks), dim=1)
     
@@ -79,7 +79,8 @@ def evaluate(checkpoint_path=None, num_images=4):
         ax.axis('off')
         
     plt.tight_layout()
-    save_path = f"evaluation_sample_{checkpoint_path.split('.')[0]}.png"
+    name = checkpoint_path.split('\\')[-1]
+    save_path = f"evaluations/128/evaluation_sample_{name.split('.')[0]}.png"
     plt.savefig(save_path)
     print(f"Saved evaluation plot to: {save_path}")
     plt.show()

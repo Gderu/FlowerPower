@@ -101,17 +101,19 @@ class UNetGenerator(nn.Module):
         self.in_channels = in_channels
         self.out_channels = out_channels
 
-        # Expected input: 64x64
-        self.inc = DoubleConv(in_channels, 64)       # 64x64
-        self.down1 = Down(64, 128)                   # 32x32
-        self.down2 = Down(128, 256)                  # 16x16
-        self.down3 = Down(256, 512)                  # 8x8
-        self.down4 = Down(512, 1024)                 # 4x4
+        # Expected input: 128x128
+        self.inc = DoubleConv(in_channels, 64)       # 128x128
+        self.down1 = Down(64, 128)                   # 64x64
+        self.down2 = Down(128, 256)                  # 32x32
+        self.down3 = Down(256, 512)                  # 16x16
+        self.down4 = Down(512, 1024)                 # 8x8
+        self.down5 = Down(1024, 2048)                # 4x4
         
-        self.up1 = Up(1024, 512)                     # 8x8
-        self.up2 = Up(512, 256)                      # 16x16
-        self.up3 = Up(256, 128)                      # 32x32
-        self.up4 = Up(128, 64)                       # 64x64
+        self.up1 = Up(2048, 1024)                    # 8x8
+        self.up2 = Up(1024, 512)                     # 16x16
+        self.up3 = Up(512, 256)                      # 32x32
+        self.up4 = Up(256, 128)                      # 64x64
+        self.up5 = Up(128, 64)                       # 128x128
         
         self.outc = OutConv(64, out_channels)
         self.tanh = nn.Tanh()
@@ -122,11 +124,13 @@ class UNetGenerator(nn.Module):
         x3 = self.down2(x2)
         x4 = self.down3(x3)
         x5 = self.down4(x4)
+        x6 = self.down5(x5)
         
-        x = self.up1(x5, x4)
-        x = self.up2(x, x3)
-        x = self.up3(x, x2)
-        x = self.up4(x, x1)
+        x = self.up1(x6, x5)
+        x = self.up2(x, x4)
+        x = self.up3(x, x3)
+        x = self.up4(x, x2)
+        x = self.up5(x, x1)
         
         logits = self.outc(x)
         return self.tanh(logits)
@@ -155,10 +159,15 @@ class Discriminator(nn.Module):
             nn.Conv2d(features * 4, features * 8, kernel_size=4, stride=2, padding=1, bias=False),
             nn.BatchNorm2d(features * 8),
             nn.LeakyReLU(0.2, inplace=True),
-            # State: (features*8, 4, 4)
+            # State: (features*8, 8, 8)
+            
+            nn.Conv2d(features * 8, features * 16, kernel_size=4, stride=2, padding=1, bias=False),
+            nn.BatchNorm2d(features * 16),
+            nn.LeakyReLU(0.2, inplace=True),
+            # State: (features*16, 4, 4)
             
             # Final output layer
-            nn.Conv2d(features * 8, 1, kernel_size=4, stride=1, padding=0, bias=False),
+            nn.Conv2d(features * 16, 1, kernel_size=4, stride=1, padding=0, bias=False),
             nn.Sigmoid()
         )
 
@@ -211,15 +220,33 @@ if __name__ == "__main__":
     ])
 
     # Create the dataset
-    dataset = ImageDataset(directory='data_64x64', transform=transform)
+    dataset = ImageDataset(directory='data_128x128', transform=transform)
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=0)
 
     # Initialize Models
     netG = UNetGenerator(in_channels=4, out_channels=3).to(device)
-    netG.apply(weights_init)
-    
     netD = Discriminator(in_channels=3, features=64).to(device)
-    netD.apply(weights_init)
+    
+    # --- RESUME FROM CHECKPOINT ---
+    start_epoch = 0
+    resume_checkpoint_G = None # e.g. "checkpoints/128/netG_epoch_3.pth"
+    resume_checkpoint_D = None # e.g. "checkpoints/128/netD_epoch_3.pth"
+    
+    if resume_checkpoint_G and resume_checkpoint_D:
+        print(f"Resuming training from {resume_checkpoint_G} and {resume_checkpoint_D}")
+        netG.load_state_dict(torch.load(resume_checkpoint_G, map_location=device))
+        netD.load_state_dict(torch.load(resume_checkpoint_D, map_location=device))
+        # Optional: uncomment below to automatically resume the epoch counter
+        # start_epoch = int(resume_checkpoint_G.split('_')[-1].split('.')[0]) + 1
+    else:
+        netG.apply(weights_init)
+        netD.apply(weights_init)
+
+    # --- MULTI-GPU SUPPORT ---
+    if torch.cuda.device_count() > 1:
+        print(f"Using {torch.cuda.device_count()} GPUs for training!")
+        netG = nn.DataParallel(netG)
+        netD = nn.DataParallel(netD)
 
     # Optimizers & Loss
     criterion_GAN = nn.BCELoss()
@@ -235,13 +262,13 @@ if __name__ == "__main__":
     D_losses = []
     
 
-    for epoch in range(num_epochs):
+    for epoch in range(start_epoch, num_epochs):
         for i, data in enumerate(dataloader):
             real_imgs = data.to(device)
             b_size = real_imgs.size(0)
             
             # Generate random quadrant masks (1 for missing regions, 0 for kept)
-            masks = get_quadrant_mask(b_size, 64, 64, device)
+            masks = get_quadrant_mask(b_size, 128, 128, device)
             
             # Mask the real images (set erased pixels to 0)
             masked_imgs = real_imgs * (1.0 - masks)
@@ -322,8 +349,10 @@ if __name__ == "__main__":
         # vutils.save_image(comp_imgs, f"generated_epoch_{epoch}.png", normalize=True)
         
         # Checkpoint every epoch
-        torch.save(netG.state_dict(), f"netG_epoch_{epoch}.pth")
-        torch.save(netD.state_dict(), f"netD_epoch_{epoch}.pth")
+        state_dict_G = netG.module.state_dict() if isinstance(netG, nn.DataParallel) else netG.state_dict()
+        state_dict_D = netD.module.state_dict() if isinstance(netD, nn.DataParallel) else netD.state_dict()
+        torch.save(state_dict_G, f"netG_epoch_{epoch}.pth")
+        torch.save(state_dict_D, f"netD_epoch_{epoch}.pth")
         print(f"Checkpoints saved for epoch {epoch}")
 
     print("Training finished.")

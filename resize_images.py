@@ -2,7 +2,7 @@ import os
 from PIL import Image
 from pathlib import Path
 
-def resize_images(input_dir, output_dir, size=(64, 64)):
+def resize_images(input_dir, output_dir, size=(128, 128)):
     input_path = Path(input_dir)
     output_path = Path(output_dir)
     
@@ -44,7 +44,7 @@ def resize_images(input_dir, output_dir, size=(64, 64)):
 if __name__ == "__main__":
     current_dir = Path(__file__).parent
     input_directory = current_dir / "data"
-    output_directory = current_dir / "data_64x64"
+    output_directory = current_dir / "data_128x128"
     
     print(f"Starting image resize from {input_directory} to {output_directory}...")
     resize_images(input_directory, output_directory)

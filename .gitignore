@@ -1,0 +1,33 @@
+# Virtual Environments
+.venv/
+venv/
+env/
+
+# Python caches
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+
+# Data
+data/
+data_64x64/
+
+# Model Checkpoints
+*.pth
+*.pt
+
+# Output Images & Plots
+loss_curve.png
+evaluation_sample*.png
+generated_epoch_*.png
+
+# Zipped Files
+*.zip
+
+# IDEs and Editors
+.vscode/
+.idea/
+*.swp

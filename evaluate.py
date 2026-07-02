@@ -1,0 +1,88 @@
+import torch
+import matplotlib.pyplot as plt
+from torchvision import transforms
+from torch.utils.data import DataLoader
+from main import UNetGenerator, ImageDataset, get_quadrant_mask
+import os
+import glob
+
+def evaluate(checkpoint_path=None, num_images=4):
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(f"Using device: {device}")
+    
+    # Find latest checkpoint if none specified
+    if checkpoint_path is None:
+        checkpoints = glob.glob("netG_epoch_*.pth")
+        if not checkpoints:
+            print("No generator checkpoints found!")
+            return
+        # Sort by epoch number
+        checkpoints.sort(key=lambda x: int(x.split('_')[-1].split('.')[0]))
+        checkpoint_path = checkpoints[-1]
+        
+    print(f"Evaluating with checkpoint: {checkpoint_path}")
+
+    # 1. Load the model
+    netG = UNetGenerator(in_channels=4, out_channels=3).to(device)
+    netG.load_state_dict(torch.load(checkpoint_path, map_location=device))
+    netG.eval()
+    
+    # 2. Setup Dataset
+    transform = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
+    ])
+    dataset = ImageDataset(directory='data_64x64', transform=transform)
+    dataloader = DataLoader(dataset, batch_size=num_images, shuffle=True)
+    
+    # 3. Get a batch of images
+    real_imgs = next(iter(dataloader)).to(device)
+    
+    # 4. Generate masks and inputs
+    masks = get_quadrant_mask(num_images, 64, 64, device)
+    masked_imgs = real_imgs * (1.0 - masks)
+    g_in = torch.cat((masked_imgs, masks), dim=1)
+    
+    # 5. Generate outputs
+    with torch.no_grad():
+        fake_imgs = netG(g_in)
+        
+    comp_imgs = masked_imgs + fake_imgs * masks
+    
+    # Helper to un-normalize images for plotting
+    def unnorm(img_tensor):
+        img = img_tensor.cpu().clone()
+        img = img * 0.5 + 0.5 # un-normalize back to [0, 1]
+        return img.permute(1, 2, 0).numpy() # (H, W, C)
+
+    # 6. Plotting
+    fig, axes = plt.subplots(num_images, 3, figsize=(10, 3 * num_images))
+    plt.suptitle(f"Evaluation using {checkpoint_path}", fontsize=16)
+    
+    for i in range(num_images):
+        # Real Image
+        ax = axes[i, 0] if num_images > 1 else axes[0]
+        ax.imshow(unnorm(real_imgs[i]))
+        ax.set_title("Real Image" if i == 0 else "")
+        ax.axis('off')
+        
+        # Masked Image
+        ax = axes[i, 1] if num_images > 1 else axes[1]
+        ax.imshow(unnorm(masked_imgs[i]))
+        ax.set_title("Masked Image" if i == 0 else "")
+        ax.axis('off')
+        
+        # Generated / Composite Image
+        ax = axes[i, 2] if num_images > 1 else axes[2]
+        ax.imshow(unnorm(comp_imgs[i]))
+        ax.set_title("Inpainted Image" if i == 0 else "")
+        ax.axis('off')
+        
+    plt.tight_layout()
+    save_path = f"evaluation_sample_{checkpoint_path.split('.')[0]}.png"
+    plt.savefig(save_path)
+    print(f"Saved evaluation plot to: {save_path}")
+    plt.show()
+
+if __name__ == "__main__":
+    evaluate(num_images=5)

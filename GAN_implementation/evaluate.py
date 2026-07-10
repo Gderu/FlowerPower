@@ -2,8 +2,12 @@ import torch
 import matplotlib.pyplot as plt
 from torchvision import transforms
 from torch.utils.data import DataLoader
-from main import UNetGenerator, ImageDataset, get_quadrant_mask
 import os
+import sys
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+from main import UNetGenerator
+from shared_utils import ImageDataset, get_large_random_mask
 import glob
 
 def evaluate(checkpoint_path=None, num_images=4):
@@ -12,12 +16,12 @@ def evaluate(checkpoint_path=None, num_images=4):
     
     # Find latest checkpoint if none specified
     if checkpoint_path is None:
-        checkpoints = glob.glob("checkpoints/128/netG_epoch_*.pth")
+        checkpoints = glob.glob("checkpoints/128/netG*.pth")
         if not checkpoints:
             print("No generator checkpoints found!")
             return
         # Sort by epoch number
-        checkpoints.sort(key=lambda x: int(x.split('_')[-1].split('.')[0]))
+        checkpoints.sort(key=lambda x: int(x[len("checkpoints/128/netG"):].split('_')[0]))
         checkpoint_path = checkpoints[-1]
         
     print(f"Evaluating with checkpoint: {checkpoint_path}")
@@ -39,7 +43,7 @@ def evaluate(checkpoint_path=None, num_images=4):
     real_imgs = next(iter(dataloader)).to(device)
     
     # 4. Generate masks and inputs
-    masks = get_quadrant_mask(num_images, 128, 128, device)
+    masks = get_large_random_mask(num_images, 128, 128, device)
     masked_imgs = real_imgs * (1.0 - masks)
     g_in = torch.cat((masked_imgs, masks), dim=1)
     

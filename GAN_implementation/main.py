@@ -1,4 +1,5 @@
 import os
+import sys
 import random
 from pathlib import Path
 from PIL import Image
@@ -15,28 +16,10 @@ try:
 except ImportError:
     in_jupyter = False
 
+# Add parent directory to path so we can import shared_utils when main.py is moved to first_project
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from shared_utils import ImageDataset, Discriminator, get_large_random_mask, compute_gradient_loss
 
-class ImageDataset(Dataset):
-    def __init__(self, directory, transform=None):
-        self.directory = Path(directory)
-        self.transform = transform
-        # Find all images
-        self.image_paths = [
-            p for p in self.directory.iterdir() 
-            if p.is_file() and p.suffix.lower() in ['.png', '.jpg', '.jpeg', '.bmp', '.gif']
-        ]
-
-    def __len__(self):
-        return len(self.image_paths)
-
-    def __getitem__(self, idx):
-        img_path = self.image_paths[idx]
-        image = Image.open(img_path).convert('RGB')
-        
-        if self.transform:
-            image = self.transform(image)
-            
-        return image
 
 # --- GENERATOR (U-NET) ---
 class DoubleConv(nn.Module):
@@ -136,63 +119,6 @@ class UNetGenerator(nn.Module):
         return self.tanh(logits)
 
 
-# --- DISCRIMINATOR ---
-class Discriminator(nn.Module):
-    def __init__(self, in_channels=3, features=64):
-        super(Discriminator, self).__init__()
-        self.main = nn.Sequential(
-            # Input: (3, 64, 64)
-            nn.Conv2d(in_channels, features, kernel_size=4, stride=2, padding=1, bias=False),
-            nn.LeakyReLU(0.2, inplace=True),
-            # State: (features, 32, 32)
-            
-            nn.Conv2d(features, features * 2, kernel_size=4, stride=2, padding=1, bias=False),
-            nn.BatchNorm2d(features * 2),
-            nn.LeakyReLU(0.2, inplace=True),
-            # State: (features*2, 16, 16)
-            
-            nn.Conv2d(features * 2, features * 4, kernel_size=4, stride=2, padding=1, bias=False),
-            nn.BatchNorm2d(features * 4),
-            nn.LeakyReLU(0.2, inplace=True),
-            # State: (features*4, 8, 8)
-            
-            nn.Conv2d(features * 4, features * 8, kernel_size=4, stride=2, padding=1, bias=False),
-            nn.BatchNorm2d(features * 8),
-            nn.LeakyReLU(0.2, inplace=True),
-            # State: (features*8, 8, 8)
-            
-            nn.Conv2d(features * 8, features * 16, kernel_size=4, stride=2, padding=1, bias=False),
-            nn.BatchNorm2d(features * 16),
-            nn.LeakyReLU(0.2, inplace=True),
-            # State: (features*16, 4, 4)
-            
-            # Final output layer
-            nn.Conv2d(features * 16, 1, kernel_size=4, stride=1, padding=0, bias=False),
-            nn.Sigmoid()
-        )
-
-    def forward(self, x):
-        return self.main(x).view(-1, 1).squeeze(1)
-
-
-# --- UTILS ---
-def get_quadrant_mask(batch_size, h, w, device):
-    """
-    Generates a mask for one of the four quadrants.
-    Mask is 1 for the region to be erased (inpainted), 0 elsewhere.
-    """
-    masks = torch.zeros((batch_size, 1, h, w), device=device)
-    for i in range(batch_size):
-        quadrant = random.randint(0, 3)
-        if quadrant == 0:   # Top-Left
-            masks[i, 0, :h//2, :w//2] = 1.0
-        elif quadrant == 1: # Top-Right
-            masks[i, 0, :h//2, w//2:] = 1.0
-        elif quadrant == 2: # Bottom-Left
-            masks[i, 0, h//2:, :w//2] = 1.0
-        else:               # Bottom-Right
-            masks[i, 0, h//2:, w//2:] = 1.0
-    return masks
 
 # Weight initialization for GAN
 def weights_init(m):
@@ -210,6 +136,7 @@ if __name__ == "__main__":
     lr = 0.0002
     beta1 = 0.5
     lambda_l1 = 100  # Weight for L1 reconstruction loss
+    lambda_edge = 50 # Weight for gradient/edge loss
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
 
@@ -267,8 +194,8 @@ if __name__ == "__main__":
             real_imgs = data.to(device)
             b_size = real_imgs.size(0)
             
-            # Generate random quadrant masks (1 for missing regions, 0 for kept)
-            masks = get_quadrant_mask(b_size, 128, 128, device)
+            # Generate random large masks (1 for missing regions, 0 for kept)
+            masks = get_large_random_mask(b_size, 128, 128, device)
             
             # Mask the real images (set erased pixels to 0)
             masked_imgs = real_imgs * (1.0 - masks)
@@ -317,8 +244,12 @@ if __name__ == "__main__":
             # L1 Loss: pixel-level accuracy only on the masked region
             errG_L1 = criterion_L1(fake_imgs * masks, real_imgs * masks)
             
+            # Gradient/Edge Loss
+            # Using comp_imgs here is critical! If we use (fake_imgs * masks), the gradient loss is ruined by the sharp 0-value boundaries of the mask.
+            errG_edge = compute_gradient_loss(comp_imgs, real_imgs)
+            
             # Total Generator Loss
-            errG = errG_GAN + lambda_l1 * errG_L1
+            errG = errG_GAN + lambda_l1 * errG_L1 + lambda_edge * errG_edge
             errG.backward()
             D_G_z2 = output_fake_for_G.mean().item()
             optimizerG.step()

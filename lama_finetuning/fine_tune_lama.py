@@ -103,6 +103,12 @@ if __name__ == "__main__":
     netG = get_lama_generator(device, pretrained_path=pretrained_weights_path)
     netD = Discriminator(in_channels=3, features=64).to(device)
 
+    # --- MULTI-GPU SUPPORT ---
+    if torch.cuda.device_count() > 1:
+        print(f"Using {torch.cuda.device_count()} GPUs for training!")
+        netG = nn.DataParallel(netG)
+        netD = nn.DataParallel(netD)
+
     # Optimizers & Loss
     criterion_GAN = nn.BCELoss()
     criterion_L1 = nn.L1Loss()
@@ -167,5 +173,7 @@ if __name__ == "__main__":
                       f"Loss_D: {errD.item():.4f} Loss_G: {errG.item():.4f}")
                       
         # Save checkpoints
-        torch.save(netG.state_dict(), f"checkpoints/lama_netG_epoch_{epoch}.pth")
-        torch.save(netD.state_dict(), f"checkpoints/lama_netD_epoch_{epoch}.pth")
+        state_dict_G = netG.module.state_dict() if isinstance(netG, nn.DataParallel) else netG.state_dict()
+        state_dict_D = netD.module.state_dict() if isinstance(netD, nn.DataParallel) else netD.state_dict()
+        torch.save(state_dict_G, f"checkpoints/lama_netG_epoch_{epoch}.pth")
+        torch.save(state_dict_D, f"checkpoints/lama_netD_epoch_{epoch}.pth")

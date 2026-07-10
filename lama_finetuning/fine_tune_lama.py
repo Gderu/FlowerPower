@@ -47,7 +47,7 @@ def get_lama_generator(device, pretrained_path=None):
     
     # Load pretrained weights if provided
     if pretrained_path and os.path.exists(pretrained_path):
-        state_dict = torch.load(pretrained_path, map_location=device)
+        state_dict = torch.load(pretrained_path, map_location=device, weights_only=False)
         # Handle state dict wrapping if necessary
         if 'state_dict' in state_dict:
             state_dict = state_dict['state_dict']
@@ -92,8 +92,6 @@ if __name__ == "__main__":
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=0)
 
     # Initialize Models
-    # NOTE: You will need to download big-lama weights (best.ckpt) from the official repo
-    # and place it in the checkpoints folder.
     pretrained_weights_path = "checkpoints/big-lama/models/best.ckpt" 
     
     netG = get_lama_generator(device, pretrained_path=pretrained_weights_path)

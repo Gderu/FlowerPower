@@ -1,9 +1,15 @@
 import os
 import torch
 import torch.nn as nn
+import os
+import pickle
+
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from torchvision import transforms
+
+# Force PyTorch to disable the global weights_only override (fixes Kaggle issues)
+os.environ["TORCH_FORCE_WEIGHTS_ONLY_LOAD"] = "0"
 
 import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -47,8 +53,8 @@ def get_lama_generator(device, pretrained_path=None):
     
     # Load pretrained weights if provided
     if pretrained_path and os.path.exists(pretrained_path):
-        state_dict = torch.load(pretrained_path, map_location=device, weights_only=False)
-        # Handle state dict wrapping if necessary
+        state_dict = torch.load(pretrained_path, map_location=device, weights_only=False, pickle_module=pickle)
+        # Handle state dict wrapping if necessaryI
         if 'state_dict' in state_dict:
             state_dict = state_dict['state_dict']
         

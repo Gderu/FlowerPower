@@ -59,8 +59,8 @@ def evaluate_lama(checkpoint_path=None, num_images=4):
     # 5. Generate outputs
     with torch.no_grad():
         fake_imgs = netG(g_in)
-        # LaMa FFC ResNet generator has add_out_act=False, so we must apply Tanh manually
-        fake_imgs = torch.tanh(fake_imgs)
+        # LaMa FFC ResNet generator outputs raw pixels directly trained for [0, 1]
+        fake_imgs = torch.clamp(fake_imgs, 0, 1)
         
     comp_imgs = masked_imgs + fake_imgs * masks
     

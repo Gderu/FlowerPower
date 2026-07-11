@@ -141,8 +141,8 @@ if __name__ == "__main__":
 
             fake_imgs = netG(g_in)
             
-            # Since add_out_act=False in FFC setup, we apply Tanh here
-            fake_imgs = torch.tanh(fake_imgs)
+            # LaMa outputs raw pixels in [0, 1], so we clamp to avoid instabilities
+            fake_imgs = torch.clamp(fake_imgs, 0, 1)
 
             comp_imgs = masked_imgs + fake_imgs * masks
             

@@ -17,7 +17,7 @@ def evaluate_lama(checkpoint_path=None, num_images=4):
     
     # Find latest checkpoint if none specified
     if checkpoint_path is None:
-        checkpoints = glob.glob("checkpoints/lama_netG*.pth")
+        checkpoints = glob.glob("checkpoints/128/fine_tune/lama_netG_epoch_*.pth")
         if not checkpoints:
             print("No generator checkpoints found!")
             return
@@ -36,9 +36,8 @@ def evaluate_lama(checkpoint_path=None, num_images=4):
         
     print(f"Evaluating with checkpoint: {checkpoint_path}")
 
-    # 1. Load the model (pretrained_path=None because we load the fine-tuned weights below)
-    netG = get_lama_generator(device, pretrained_path=None)
-    netG.load_state_dict(torch.load(checkpoint_path, map_location=device))
+    # 1. Load the model (get_lama_generator handles both original and fine-tuned checkpoints!)
+    netG = get_lama_generator(device, pretrained_path=checkpoint_path)
     netG.eval()
     
     # 2. Setup Dataset
@@ -106,4 +105,4 @@ def evaluate_lama(checkpoint_path=None, num_images=4):
     plt.show()
 
 if __name__ == "__main__":
-    evaluate_lama(num_images=5)
+    evaluate_lama(checkpoint_path=r"C:\Users\orrsh\Documents\deep learning course\project\evaluations\big-lama\models\best.ckpt", num_images=5)

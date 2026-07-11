@@ -42,8 +42,7 @@ def evaluate_lama(checkpoint_path=None, num_images=4):
     
     # 2. Setup Dataset
     transform = transforms.Compose([
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
+        transforms.ToTensor()
     ])
     # Make sure this points to the right dataset location
     dataset = ImageDataset(directory='data_128x128', transform=transform)
@@ -68,7 +67,7 @@ def evaluate_lama(checkpoint_path=None, num_images=4):
     # Helper to un-normalize images for plotting
     def unnorm(img_tensor):
         img = img_tensor.cpu().clone()
-        img = img * 0.5 + 0.5 # un-normalize back to [0, 1]
+        # No un-normalization needed, inputs are already in [0, 1]
         return img.permute(1, 2, 0).numpy() # (H, W, C)
 
     # 6. Plotting
@@ -105,4 +104,4 @@ def evaluate_lama(checkpoint_path=None, num_images=4):
     plt.show()
 
 if __name__ == "__main__":
-    evaluate_lama(checkpoint_path=r"C:\Users\orrsh\Documents\deep learning course\project\evaluations\big-lama\models\best.ckpt", num_images=5)
+    evaluate_lama(r"C:\Users\orrsh\Documents\deep learning course\project\evaluations\big-lama\models\best.ckpt", num_images=5)

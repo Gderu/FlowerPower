@@ -91,8 +91,7 @@ if __name__ == "__main__":
 
     # Dataloader
     transform = transforms.Compose([
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
+        transforms.ToTensor()
     ])
     dataset = ImageDataset(directory='data_128x128', transform=transform)
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=0)

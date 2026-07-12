@@ -17,7 +17,7 @@ def evaluate_lama(checkpoint_path=None, num_images=4):
     
     # Find latest checkpoint if none specified
     if checkpoint_path is None:
-        checkpoints = glob.glob("checkpoints/128/fine_tune/lama_netG_epoch_*.pth")
+        checkpoints = glob.glob("checkpoints/128/fine_tuned_correctly/lama_netG_epoch_*.pth")
         if not checkpoints:
             print("No generator checkpoints found!")
             return
@@ -104,4 +104,4 @@ def evaluate_lama(checkpoint_path=None, num_images=4):
     plt.show()
 
 if __name__ == "__main__":
-    evaluate_lama(r"C:\Users\orrsh\Documents\deep learning course\project\evaluations\big-lama\models\best.ckpt", num_images=5)
+    evaluate_lama(r"C:\Users\orrsh\Documents\deep learning course\project\checkpoints\128\fine_tuned_correctly\lama_netG_epoch_59.pth", num_images=5)

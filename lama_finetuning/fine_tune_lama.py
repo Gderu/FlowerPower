@@ -1,12 +1,11 @@
 import os
 import torch
 import torch.nn as nn
-import os
 import pickle
 
 import torch.optim as optim
 from torch.utils.data import DataLoader
-from torchvision import transforms
+from torchvision import transforms, models
 
 # Force PyTorch to disable the global weights_only override (fixes Kaggle issues)
 os.environ["TORCH_FORCE_WEIGHTS_ONLY_LOAD"] = "0"
@@ -22,8 +21,6 @@ from shared_utils import ImageDataset, Discriminator, get_large_random_mask, com
 # ---------------------------------------------------------
 # To fine-tune the raw PyTorch model, we import the architecture from the official repo.
 # Make sure the 'lama_repo' folder is in your project directory (git cloned).
-import os
-import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), 'lama_repo')))
 
 try:
@@ -54,7 +51,7 @@ def get_lama_generator(device, pretrained_path=None):
     # Load pretrained weights if provided
     if pretrained_path and os.path.exists(pretrained_path):
         state_dict = torch.load(pretrained_path, map_location=device, weights_only=False, pickle_module=pickle)
-        # Handle state dict wrapping if necessaryI
+        # Handle state dict wrapping if necessary
         if 'state_dict' in state_dict:
             state_dict = state_dict['state_dict']
         
@@ -73,6 +70,38 @@ def get_lama_generator(device, pretrained_path=None):
         
     return netG
 
+
+class VGGPerceptualLoss(nn.Module):
+    """Compares images in VGG feature space rather than pixel space.
+    Frozen VGG16 is used as a fixed feature extractor — no trainable params.
+    This is much more sensitive to color/style inconsistencies than L1."""
+    def __init__(self):
+        super().__init__()
+        vgg = models.vgg16(weights=models.VGG16_Weights.IMAGENET1K_V1).features
+        # Extract features at three depth levels
+        self.slice1 = nn.Sequential(*vgg[:4])   # relu1_2 — colors, edges
+        self.slice2 = nn.Sequential(*vgg[4:9])   # relu2_2 — textures
+        self.slice3 = nn.Sequential(*vgg[9:16])  # relu3_3 — patterns, structure
+        # Freeze all weights — we never train VGG
+        for param in self.parameters():
+            param.requires_grad = False
+        # VGG expects ImageNet-normalized inputs
+        self.register_buffer('mean', torch.tensor([0.485, 0.456, 0.406]).view(1, 3, 1, 1))
+        self.register_buffer('std', torch.tensor([0.229, 0.224, 0.225]).view(1, 3, 1, 1))
+
+    def normalize(self, x):
+        return (x - self.mean) / self.std
+
+    def forward(self, fake, real):
+        fake = self.normalize(fake)
+        real = self.normalize(real)
+        loss = 0.0
+        for layer in [self.slice1, self.slice2, self.slice3]:
+            fake = layer(fake)
+            real = layer(real)
+            loss += nn.functional.l1_loss(fake, real)
+        return loss
+
 # ---------------------------------------------------------
 # FINE-TUNING LOOP
 # ---------------------------------------------------------
@@ -86,8 +115,10 @@ if __name__ == "__main__":
     num_epochs = 10
     lr_G = 1e-5     # Low learning rate for fine-tuning
     lr_D = 1e-4     # Discriminator learns faster
-    lambda_l1 = 100 
+    lambda_l1_hole = 100 
+    lambda_l1_valid = 20  # Enforces color consistency with the unmasked areas
     lambda_edge = 50
+    lambda_perceptual = 10  # Perceptual loss weight — enforces color/style consistency in feature space
 
     # Dataloader
     transform = transforms.Compose([
@@ -111,6 +142,7 @@ if __name__ == "__main__":
     # Optimizers & Loss
     criterion_GAN = nn.BCELoss()
     criterion_L1 = nn.L1Loss()
+    perceptual_loss_fn = VGGPerceptualLoss().to(device).eval()
     
     optimizerD = optim.Adam(netD.parameters(), lr=lr_D, betas=(0.5, 0.999))
     optimizerG = optim.Adam(netG.parameters(), lr=lr_G, betas=(0.5, 0.999))
@@ -160,10 +192,16 @@ if __name__ == "__main__":
             output_fake_for_G = netD(comp_imgs)
             
             errG_GAN = criterion_GAN(output_fake_for_G, real_label)
-            errG_L1 = criterion_L1(fake_imgs * masks, real_imgs * masks)
-            errG_edge = compute_gradient_loss(comp_imgs, real_imgs)
+            # L1 loss on the masked region (the hole)
+            errG_L1_hole = criterion_L1(fake_imgs * masks, real_imgs * masks)
+            # L1 loss on the unmasked region (valid pixels). This forces the generator to maintain 
+            # color consistency with the surrounding area instead of drifting in color space.
+            errG_L1_valid = criterion_L1(fake_imgs * (1 - masks), real_imgs * (1 - masks))
             
-            errG = errG_GAN + lambda_l1 * errG_L1 + lambda_edge * errG_edge
+            errG_edge = compute_gradient_loss(comp_imgs, real_imgs)
+            errG_perceptual = perceptual_loss_fn(comp_imgs, real_imgs)
+            
+            errG = errG_GAN + lambda_l1_hole * errG_L1_hole + lambda_l1_valid * errG_L1_valid + lambda_edge * errG_edge + lambda_perceptual * errG_perceptual
             errG.backward()
             optimizerG.step()
 

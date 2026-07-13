@@ -16,12 +16,14 @@ def evaluate(checkpoint_path=None, num_images=4):
     
     # Find latest checkpoint if none specified
     if checkpoint_path is None:
-        checkpoints = glob.glob("checkpoints/128/netG*.pth")
+        checkpoints = glob.glob("checkpoints/gan/netG_epoch_*.pth")
         if not checkpoints:
             print("No generator checkpoints found!")
             return
         # Sort by epoch number
-        checkpoints.sort(key=lambda x: int(x[len("checkpoints/128/netG"):].split('_')[0]))
+        def get_epoch(x):
+            return int(os.path.basename(x).split('_')[-1].split('.')[0])
+        checkpoints.sort(key=get_epoch)
         checkpoint_path = checkpoints[-1]
         
     print(f"Evaluating with checkpoint: {checkpoint_path}")
@@ -77,8 +79,9 @@ def evaluate(checkpoint_path=None, num_images=4):
         ax.axis('off')
         
     plt.tight_layout()
-    name = checkpoint_path.split('\\')[-1]
-    save_path = f"evaluations/128/evaluation_sample_{name.split('.')[0]}.png"
+    os.makedirs("evaluations/gan", exist_ok=True)
+    name = os.path.basename(checkpoint_path)
+    save_path = f"evaluations/gan/evaluation_sample_{name.split('.')[0]}.png"
     plt.savefig(save_path)
     print(f"Saved evaluation plot to: {save_path}")
     plt.show()

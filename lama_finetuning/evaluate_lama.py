@@ -17,7 +17,7 @@ def evaluate_lama(checkpoint_path=None, num_images=4):
     
     # Find latest checkpoint if none specified
     if checkpoint_path is None:
-        checkpoints = glob.glob("checkpoints/128/fine_tuned_correctly/lama_netG_epoch_*.pth")
+        checkpoints = glob.glob("checkpoints/lama/lama_netG_epoch_*.pth")
         if not checkpoints:
             print("No generator checkpoints found!")
             return
@@ -83,9 +83,9 @@ def evaluate_lama(checkpoint_path=None, num_images=4):
         
     plt.tight_layout()
     
-    os.makedirs("evaluations/lama_finetuning", exist_ok=True)
+    os.makedirs("evaluations/lama", exist_ok=True)
     name = os.path.basename(checkpoint_path)
-    save_path = f"evaluations/lama_finetuning/evaluation_sample_{name.split('.')[0]}.png"
+    save_path = f"evaluations/lama/evaluation_sample_{name.split('.')[0]}.png"
     plt.savefig(save_path)
     print(f"Saved evaluation plot to: {save_path}")
     plt.show()

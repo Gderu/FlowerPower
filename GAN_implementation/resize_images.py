@@ -41,9 +41,9 @@ def resize_images(input_dir, output_dir, size=(128, 128)):
         print(f"Encountered errors on {errors} images.")
 
 if __name__ == "__main__":
-    current_dir = Path(__file__).parent
-    input_directory = current_dir / "data"
-    output_directory = current_dir / "data_128x128"
+    project_root = Path(__file__).parent.parent
+    input_directory = project_root / "data"
+    output_directory = project_root / "data_128x128"
     
     print(f"Starting image resize from {input_directory} to {output_directory}...")
     resize_images(input_directory, output_directory)

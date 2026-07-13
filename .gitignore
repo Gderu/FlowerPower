@@ -16,15 +16,12 @@ data/
 data_64x64/
 data_128x128/
 
-# Model Checkpoints
+# Model checkpoints and outputs
 checkpoints/
+evaluations/
 *.pth
 *.pt
-
-# Output Images & Plots
-loss_curve.png
-evaluation_sample*.png
-generated_epoch_*.png
+*.ckpt
 
 # Zipped Files
 *.zip
@@ -33,10 +30,6 @@ generated_epoch_*.png
 .vscode/
 .idea/
 *.swp
-
-# Evaluations and large checkpoints
-evaluations/
-*.ckpt
 
 # Cloned dependencies
 lama_finetuning/lama_repo/

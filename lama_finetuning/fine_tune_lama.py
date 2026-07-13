@@ -141,6 +141,7 @@ if __name__ == "__main__":
     optimizerG = optim.Adam(netG.parameters(), lr=lr_G, betas=(0.5, 0.999))
 
     print("Starting Fine-Tuning Loop...")
+    os.makedirs("checkpoints/lama", exist_ok=True)
 
     for epoch in range(num_epochs):
         for i, data in enumerate(dataloader):
@@ -203,5 +204,5 @@ if __name__ == "__main__":
         # Save checkpoints
         state_dict_G = netG.module.state_dict() if isinstance(netG, nn.DataParallel) else netG.state_dict()
         state_dict_D = netD.module.state_dict() if isinstance(netD, nn.DataParallel) else netD.state_dict()
-        torch.save(state_dict_G, f"checkpoints/lama_netG_epoch_{epoch}.pth")
-        torch.save(state_dict_D, f"checkpoints/lama_netD_epoch_{epoch}.pth")
+        torch.save(state_dict_G, f"checkpoints/lama/lama_netG_epoch_{epoch}.pth")
+        torch.save(state_dict_D, f"checkpoints/lama/lama_netD_epoch_{epoch}.pth")

@@ -154,8 +154,8 @@ if __name__ == "__main__":
     
     # --- RESUME FROM CHECKPOINT ---
     start_epoch = 0
-    resume_checkpoint_G = None  # e.g. "checkpoints/128/netG_epoch_3.pth"
-    resume_checkpoint_D = None  # e.g. "checkpoints/128/netD_epoch_3.pth"
+    resume_checkpoint_G = None  # e.g. "checkpoints/gan/netG_epoch_3.pth"
+    resume_checkpoint_D = None  # e.g. "checkpoints/gan/netD_epoch_3.pth"
     
     if resume_checkpoint_G and resume_checkpoint_D:
         print(f"Resuming training from {resume_checkpoint_G} and {resume_checkpoint_D}")
@@ -179,6 +179,8 @@ if __name__ == "__main__":
     optimizerG = optim.Adam(netG.parameters(), lr=lr, betas=(beta1, 0.999))
 
     print("Starting Training Loop...")
+    os.makedirs("checkpoints/gan", exist_ok=True)
+    os.makedirs("evaluations/gan", exist_ok=True)
     
     # Lists to keep track of progress
     G_losses = []
@@ -272,8 +274,8 @@ if __name__ == "__main__":
         # Checkpoint every epoch
         state_dict_G = netG.module.state_dict() if isinstance(netG, nn.DataParallel) else netG.state_dict()
         state_dict_D = netD.module.state_dict() if isinstance(netD, nn.DataParallel) else netD.state_dict()
-        torch.save(state_dict_G, f"netG_epoch_{epoch}.pth")
-        torch.save(state_dict_D, f"netD_epoch_{epoch}.pth")
+        torch.save(state_dict_G, f"checkpoints/gan/netG_epoch_{epoch}.pth")
+        torch.save(state_dict_D, f"checkpoints/gan/netD_epoch_{epoch}.pth")
         print(f"Checkpoints saved for epoch {epoch}")
 
     print("Training finished.")
@@ -286,5 +288,5 @@ if __name__ == "__main__":
     plt.xlabel("iterations")
     plt.ylabel("Loss")
     plt.legend()
-    plt.savefig("loss_curve.png")
+    plt.savefig("evaluations/gan/loss_curve.png")
     plt.show()

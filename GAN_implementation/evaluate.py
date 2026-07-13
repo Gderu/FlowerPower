@@ -16,22 +16,22 @@ def evaluate(checkpoint_path=None, num_images=4):
     
     # Find latest checkpoint if none specified
     if checkpoint_path is None:
-        checkpoints = glob.glob("checkpoints/128/netG*.pth")
+        checkpoints = glob.glob("checkpoints/gan/netG_epoch_*.pth")
         if not checkpoints:
             print("No generator checkpoints found!")
             return
         # Sort by epoch number
-        checkpoints.sort(key=lambda x: int(x[len("checkpoints/128/netG"):].split('_')[0]))
+        def get_epoch(x):
+            return int(os.path.basename(x).split('_')[-1].split('.')[0])
+        checkpoints.sort(key=get_epoch)
         checkpoint_path = checkpoints[-1]
         
     print(f"Evaluating with checkpoint: {checkpoint_path}")
 
-    # 1. Load the model
     netG = UNetGenerator(in_channels=4, out_channels=3).to(device)
     netG.load_state_dict(torch.load(checkpoint_path, map_location=device))
     netG.eval()
     
-    # 2. Setup Dataset
     transform = transforms.Compose([
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
@@ -39,27 +39,23 @@ def evaluate(checkpoint_path=None, num_images=4):
     dataset = ImageDataset(directory='data_128x128', transform=transform)
     dataloader = DataLoader(dataset, batch_size=num_images, shuffle=True)
     
-    # 3. Get a batch of images
     real_imgs = next(iter(dataloader)).to(device)
     
-    # 4. Generate masks and inputs
     masks = get_large_random_mask(num_images, 128, 128, device)
     masked_imgs = real_imgs * (1.0 - masks)
     g_in = torch.cat((masked_imgs, masks), dim=1)
     
-    # 5. Generate outputs
     with torch.no_grad():
         fake_imgs = netG(g_in)
         
     comp_imgs = masked_imgs + fake_imgs * masks
     
-    # Helper to un-normalize images for plotting
+    # Un-normalize from [-1, 1] back to [0, 1] for plotting
     def unnorm(img_tensor):
         img = img_tensor.cpu().clone()
         img = img * 0.5 + 0.5 # un-normalize back to [0, 1]
         return img.permute(1, 2, 0).numpy() # (H, W, C)
 
-    # 6. Plotting
     fig, axes = plt.subplots(num_images, 3, figsize=(10, 3 * num_images))
     plt.suptitle(f"Evaluation using {checkpoint_path}", fontsize=16)
     
@@ -83,8 +79,9 @@ def evaluate(checkpoint_path=None, num_images=4):
         ax.axis('off')
         
     plt.tight_layout()
-    name = checkpoint_path.split('\\')[-1]
-    save_path = f"evaluations/128/evaluation_sample_{name.split('.')[0]}.png"
+    os.makedirs("evaluations/gan", exist_ok=True)
+    name = os.path.basename(checkpoint_path)
+    save_path = f"evaluations/gan/evaluation_sample_{name.split('.')[0]}.png"
     plt.savefig(save_path)
     print(f"Saved evaluation plot to: {save_path}")
     plt.show()

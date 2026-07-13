@@ -8,7 +8,6 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms
-import torchvision.utils as vutils
 import matplotlib.pyplot as plt
 try:
     from IPython.display import clear_output, display
@@ -16,7 +15,6 @@ try:
 except ImportError:
     in_jupyter = False
 
-# Add parent directory to path so we can import shared_utils when main.py is moved to first_project
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from shared_utils import ImageDataset, Discriminator, get_large_random_mask, compute_gradient_loss
 
@@ -62,7 +60,7 @@ class Up(nn.Module):
 
     def forward(self, x1, x2):
         x1 = self.up(x1)
-        # Pad x1 if necessary to match x2 size (though here we assume sizes match perfectly)
+        # Pad x1 to match x2 size if needed
         diffY = x2.size()[2] - x1.size()[2]
         diffX = x2.size()[3] - x1.size()[3]
         x1 = torch.nn.functional.pad(x1, [diffX // 2, diffX - diffX // 2, diffY // 2, diffY - diffY // 2])
@@ -156,15 +154,13 @@ if __name__ == "__main__":
     
     # --- RESUME FROM CHECKPOINT ---
     start_epoch = 0
-    resume_checkpoint_G = None # e.g. "checkpoints/128/netG_epoch_3.pth"
-    resume_checkpoint_D = None # e.g. "checkpoints/128/netD_epoch_3.pth"
+    resume_checkpoint_G = None  # e.g. "checkpoints/gan/netG_epoch_3.pth"
+    resume_checkpoint_D = None  # e.g. "checkpoints/gan/netD_epoch_3.pth"
     
     if resume_checkpoint_G and resume_checkpoint_D:
         print(f"Resuming training from {resume_checkpoint_G} and {resume_checkpoint_D}")
         netG.load_state_dict(torch.load(resume_checkpoint_G, map_location=device))
         netD.load_state_dict(torch.load(resume_checkpoint_D, map_location=device))
-        # Optional: uncomment below to automatically resume the epoch counter
-        # start_epoch = int(resume_checkpoint_G.split('_')[-1].split('.')[0]) + 1
     else:
         netG.apply(weights_init)
         netD.apply(weights_init)
@@ -183,6 +179,8 @@ if __name__ == "__main__":
     optimizerG = optim.Adam(netG.parameters(), lr=lr, betas=(beta1, 0.999))
 
     print("Starting Training Loop...")
+    os.makedirs("checkpoints/gan", exist_ok=True)
+    os.makedirs("evaluations/gan", exist_ok=True)
     
     # Lists to keep track of progress
     G_losses = []
@@ -212,16 +210,14 @@ if __name__ == "__main__":
             real_label = torch.ones((b_size,), dtype=torch.float, device=device)
             fake_label = torch.zeros((b_size,), dtype=torch.float, device=device)
 
-            # Train with real images
             output_real = netD(real_imgs)
             errD_real = criterion_GAN(output_real, real_label)
             errD_real.backward()
             D_x = output_real.mean().item()
 
-            # Train with fake images
             fake_imgs = netG(g_in)
             
-            # Composite image: original image outside the mask, generated image inside the mask
+            # Composite: original pixels outside the mask, generated pixels inside
             comp_imgs = masked_imgs + fake_imgs * masks
             
             output_fake = netD(comp_imgs.detach())
@@ -244,8 +240,7 @@ if __name__ == "__main__":
             # L1 Loss: pixel-level accuracy only on the masked region
             errG_L1 = criterion_L1(fake_imgs * masks, real_imgs * masks)
             
-            # Gradient/Edge Loss
-            # Using comp_imgs here is critical! If we use (fake_imgs * masks), the gradient loss is ruined by the sharp 0-value boundaries of the mask.
+            # Edge loss on composite to penalize boundary artifacts
             errG_edge = compute_gradient_loss(comp_imgs, real_imgs)
             
             # Total Generator Loss
@@ -276,14 +271,11 @@ if __name__ == "__main__":
             G_losses.append(errG.item())
             D_losses.append(errD.item())
                 
-        # Optional: save output
-        # vutils.save_image(comp_imgs, f"generated_epoch_{epoch}.png", normalize=True)
-        
         # Checkpoint every epoch
         state_dict_G = netG.module.state_dict() if isinstance(netG, nn.DataParallel) else netG.state_dict()
         state_dict_D = netD.module.state_dict() if isinstance(netD, nn.DataParallel) else netD.state_dict()
-        torch.save(state_dict_G, f"netG_epoch_{epoch}.pth")
-        torch.save(state_dict_D, f"netD_epoch_{epoch}.pth")
+        torch.save(state_dict_G, f"checkpoints/gan/netG_epoch_{epoch}.pth")
+        torch.save(state_dict_D, f"checkpoints/gan/netD_epoch_{epoch}.pth")
         print(f"Checkpoints saved for epoch {epoch}")
 
     print("Training finished.")
@@ -296,5 +288,5 @@ if __name__ == "__main__":
     plt.xlabel("iterations")
     plt.ylabel("Loss")
     plt.legend()
-    plt.savefig("loss_curve.png")
+    plt.savefig("evaluations/gan/loss_curve.png")
     plt.show()

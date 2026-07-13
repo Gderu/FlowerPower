@@ -36,3 +36,20 @@ generated_epoch_*.png
 # Evaluations and large checkpoints
 evaluations/
 *.ckpt
+
+# LaTeX build artifacts
+*.aux
+*.log
+*.out
+*.toc
+*.synctex.gz
+*.fls
+*.fdb_latexmk
+*.bbl
+*.blg
+
+# Upstream PIC demo animations (~140 MB, not project content)
+pic_inpainting/pic_repo/images/*.gif
+
+# Dropped: raw upstream ICT clone with no project integration code
+ict_inpainting/

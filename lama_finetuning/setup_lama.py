@@ -26,16 +26,7 @@ def setup_lama():
         ], check=True)
         print("LaMa repo cloned successfully.")
     
-    # Step 2: Install LaMa's Python dependencies
-    lama_requirements = os.path.join(lama_repo_dir, 'requirements.txt')
-    if os.path.exists(lama_requirements):
-        print("Installing LaMa dependencies...")
-        subprocess.run([
-            sys.executable, '-m', 'pip', 'install', '-r', lama_requirements
-        ], check=True)
-        print("LaMa dependencies installed.")
-    
-    # Step 3: Download pretrained big-lama weights from Hugging Face
+    # Step 2: Download pretrained big-lama weights from Hugging Face
     if os.path.exists(weights_path):
         print(f"Pretrained weights already exist at {weights_path}, skipping download.")
     else:
@@ -59,6 +50,20 @@ def setup_lama():
             print("WARNING: Extraction finished but best.ckpt not found at expected path.")
             print(f"Expected: {weights_path}")
             print("You may need to manually locate the checkpoint file.")
+
+    # Step 3: Install LaMa's Python dependencies
+    lama_requirements = os.path.join(lama_repo_dir, 'requirements.txt')
+    if os.path.exists(lama_requirements):
+        print("Installing LaMa dependencies...")
+        try:
+            subprocess.run([
+                sys.executable, '-m', 'pip', 'install', '-r', lama_requirements
+            ], check=True)
+            print("LaMa dependencies installed.")
+        except subprocess.CalledProcessError:
+            print("\nWARNING: Some LaMa dependencies failed to install.")
+            print("This is common due to older package versions in LaMa's requirements.")
+            print("You may need to manually resolve them or use a virtual environment.")
     
     print("\nLaMa setup complete! You can now run:")
     print("  python lama_finetuning/fine_tune_lama.py")

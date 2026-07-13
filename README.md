@@ -21,7 +21,7 @@ pip install -r requirements.txt
 ### Download and Prepare Data
 We use the Oxford 102 Flowers dataset. Run this command from the project root to download and resize the images to 128x128.
 ```bash
-python GAN_implementation/prepare_data.py
+python prepare_data.py
 ```
 This will create a `data_128x128/` folder in the project root containing the prepared images.
 

@@ -69,7 +69,7 @@ def resize_images(input_dir: Path, output_dir: Path, size=(128, 128)):
         print(f"Encountered errors on {errors} images.")
 
 if __name__ == "__main__":
-    project_root = Path(__file__).parent.parent
+    project_root = Path(__file__).parent
     
     print("=== Step 1: Downloading and Extracting Data ===")
     download_and_extract(str(project_root))

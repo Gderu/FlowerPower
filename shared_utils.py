@@ -1,4 +1,6 @@
-import os
+"""Shared components used by both GAN and LaMa training pipelines:
+dataset loading, discriminator, masking, and loss utilities."""
+
 import random
 from pathlib import Path
 from PIL import Image

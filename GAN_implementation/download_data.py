@@ -9,7 +9,6 @@ def download_and_extract():
     extract_dir = "data"
 
     print(f"Downloading 102 Category Flower Dataset from {url}...")
-    print("This is a ~330MB file, so it might take a minute or two...")
     
     urllib.request.urlretrieve(url, filename)
     print("Download complete. Extracting files...")
@@ -18,14 +17,14 @@ def download_and_extract():
     with tarfile.open(filename, "r:gz") as tar:
         tar.extractall()
     
-    # We want the images to be in 'data' directly so resize_images.py works out of the box
+    # Move extracted 'jpg' folder to 'data' for consistency
     if os.path.exists('jpg'):
         if os.path.exists(extract_dir):
             shutil.rmtree(extract_dir) # Clear old data if it exists
         os.rename('jpg', extract_dir)
         print(f"Moved images from 'jpg' to '{extract_dir}' folder.")
 
-    # Cleanup the downloaded tarball to save space
+    # Clean up tarball
     if os.path.exists(filename):
         os.remove(filename)
 

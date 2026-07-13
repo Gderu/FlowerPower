@@ -6,7 +6,6 @@ def resize_images(input_dir, output_dir, size=(128, 128)):
     input_path = Path(input_dir)
     output_path = Path(output_dir)
     
-    # Create the output directory if it doesn't exist
     output_path.mkdir(parents=True, exist_ok=True)
     
     count = 0
@@ -19,7 +18,7 @@ def resize_images(input_dir, output_dir, size=(128, 128)):
         if img_file.is_file() and img_file.suffix.lower() in ['.png', '.jpg', '.jpeg', '.bmp', '.gif']:
             try:
                 with Image.open(img_file) as img:
-                    # Convert to RGB if necessary (e.g. for RGBA or P modes when saving as JPEG)
+                    # Convert to RGB if needed for JPEG saving
                     if img.mode != 'RGB' and img_file.suffix.lower() in ['.jpg', '.jpeg']:
                         img = img.convert('RGB')
                         

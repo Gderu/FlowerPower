@@ -7,20 +7,14 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 from torchvision import transforms, models
 
-# Force PyTorch to disable the global weights_only override (fixes Kaggle issues)
 os.environ["TORCH_FORCE_WEIGHTS_ONLY_LOAD"] = "0"
 
 import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-# Import Dataset and Discriminator from shared_utils
 from shared_utils import ImageDataset, Discriminator, get_large_random_mask, compute_gradient_loss
 
-# ---------------------------------------------------------
-# LAMA FFC GENERATOR SETUP
-# ---------------------------------------------------------
-# To fine-tune the raw PyTorch model, we import the architecture from the official repo.
-# Make sure the 'lama_repo' folder is in your project directory (git cloned).
+# LaMa FFC generator — requires cloning https://github.com/advimman/lama.git into 'lama_repo'
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), 'lama_repo')))
 
 try:
@@ -109,16 +103,15 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
 
-    # HYPERPARAMETERS FOR FINE-TUNING
-    # We use a very low learning rate for the generator so we don't destroy its pretrained knowledge
-    batch_size = 16 # Might need to lower this if LaMa runs out of memory (FFC is heavy)
+    # Hyperparameters
+    batch_size = 16
     num_epochs = 10
-    lr_G = 1e-5     # Low learning rate for fine-tuning
-    lr_D = 1e-4     # Discriminator learns faster
+    lr_G = 1e-5
+    lr_D = 1e-4
     lambda_l1_hole = 100 
-    lambda_l1_valid = 20  # Enforces color consistency with the unmasked areas
+    lambda_l1_valid = 20
     lambda_edge = 50
-    lambda_perceptual = 10  # Perceptual loss weight — enforces color/style consistency in feature space
+    lambda_perceptual = 10
 
     # Dataloader
     transform = transforms.Compose([
@@ -128,7 +121,7 @@ if __name__ == "__main__":
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=0)
 
     # Initialize Models
-    pretrained_weights_path = "checkpoints/big-lama/models/best.ckpt" 
+    pretrained_weights_path = "checkpoints/big-lama/models/best.ckpt"
     
     netG = get_lama_generator(device, pretrained_path=pretrained_weights_path)
     netD = Discriminator(in_channels=3, features=64).to(device)
@@ -192,10 +185,8 @@ if __name__ == "__main__":
             output_fake_for_G = netD(comp_imgs)
             
             errG_GAN = criterion_GAN(output_fake_for_G, real_label)
-            # L1 loss on the masked region (the hole)
             errG_L1_hole = criterion_L1(fake_imgs * masks, real_imgs * masks)
-            # L1 loss on the unmasked region (valid pixels). This forces the generator to maintain 
-            # color consistency with the surrounding area instead of drifting in color space.
+            # Valid region L1 to anchor color consistency
             errG_L1_valid = criterion_L1(fake_imgs * (1 - masks), real_imgs * (1 - masks))
             
             errG_edge = compute_gradient_loss(comp_imgs, real_imgs)

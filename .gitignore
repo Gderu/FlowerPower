@@ -17,6 +17,7 @@ data_64x64/
 data_128x128/
 
 # Model Checkpoints
+checkpoints/
 *.pth
 *.pt
 
@@ -36,3 +37,6 @@ generated_epoch_*.png
 # Evaluations and large checkpoints
 evaluations/
 *.ckpt
+
+# Cloned dependencies
+lama_finetuning/lama_repo/

@@ -81,8 +81,8 @@ def main():
     parser.add_argument("--data_dir", type=str, default="data_128x128",
                         help="folder of images (resized to 128 on load)")
     parser.add_argument("--ckpt_dir", type=str,
-                        default=os.path.join(os.path.dirname(__file__), "checkpoints", "imagenet_random"),
-                        help="folder with latest_net_E.pth / latest_net_G.pth")
+                        default=os.path.join(os.path.dirname(__file__), "checkpoints", "pretrained"),
+                        help="folder with an E/G checkpoint pair (*_net_E.pth / *_net_G.pth)")
     parser.add_argument("--num_images", type=int, default=4)
     parser.add_argument("--sample_num", type=int, default=3)
     parser.add_argument("--out", type=str,
@@ -96,7 +96,7 @@ def main():
     if not os.path.isdir(args.data_dir):
         raise FileNotFoundError(
             "data dir '%s' not found. Point --data_dir at a folder of images "
-            "(e.g. data_128x128, regenerated via GAN_implementation/download_data.py + resize_images.py)."
+            "(e.g. data_128x128, regenerated via `python prepare_data.py` from the repo root)."
             % args.data_dir
         )
 
@@ -112,7 +112,7 @@ def main():
     masks = get_large_random_mask(reals.size(0), 128, 128, device)  # (B,1,128,128), 1 = hole
     maskeds = reals * (1.0 - masks)
 
-    print("loading PIC (ImageNet checkpoint)...")
+    print("loading PIC from %s ..." % args.ckpt_dir)
     net_E, net_G = get_pic_inpainter(args.ckpt_dir, device)
 
     print("running %d diverse completions per image..." % args.sample_num)

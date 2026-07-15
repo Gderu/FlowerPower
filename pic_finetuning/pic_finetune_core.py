@@ -23,8 +23,6 @@ import os
 import re
 import glob
 import math
-import shutil
-import tempfile
 
 import torch
 import torch.nn as nn
@@ -261,35 +259,10 @@ def load_train_state(path, optimizer, device):
 # --------------------------------------------------------------------------------------
 # Checkpoint discovery: load whatever E/G weights live in a folder (best_ > latest_ > epoch_N).
 # --------------------------------------------------------------------------------------
-def discover_pair(ckpt_dir):
-    """Return (e_path, g_path), preferring best_ > latest_ > highest epoch_N."""
-    def pick(which):
-        cands = glob.glob(os.path.join(ckpt_dir, f"*_net_{which}.pth"))
-        if not cands:
-            raise FileNotFoundError(f"no *_net_{which}.pth in {ckpt_dir}")
-
-        def rank(p):
-            b = os.path.basename(p)
-            if b.startswith("best_"):
-                return (3, 0)
-            if b.startswith("latest_"):
-                return (2, 0)
-            m = re.match(r"epoch_(\d+)_", b)
-            return (1, int(m.group(1))) if m else (0, 0)
-
-        return max(cands, key=rank)
-
-    return pick("E"), pick("G")
-
-
 def load_model(ckpt_dir, device):
     """Build net_E/net_G and load the discovered checkpoint. Returns
-    (net_E, net_G, e_name, g_name). Reuses pic_inference.get_pic_inpainter (which reads
-    latest_net_{E,G}.pth) by staging the discovered files in a temp dir."""
-    from pic_inference import get_pic_inpainter
-    e_path, g_path = discover_pair(ckpt_dir)
-    tmp = tempfile.mkdtemp()
-    shutil.copy(e_path, os.path.join(tmp, "latest_net_E.pth"))
-    shutil.copy(g_path, os.path.join(tmp, "latest_net_G.pth"))
-    net_E, net_G = get_pic_inpainter(tmp, device)
+    (net_E, net_G, e_name, g_name)."""
+    from pic_inference import get_pic_inpainter, resolve_checkpoints
+    e_path, g_path = resolve_checkpoints(ckpt_dir)
+    net_E, net_G = get_pic_inpainter(ckpt_dir, device)
     return net_E, net_G, os.path.basename(e_path), os.path.basename(g_path)

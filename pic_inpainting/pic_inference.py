@@ -22,7 +22,9 @@ Key contracts (verified against the vendored PIC source):
 """
 
 import os
+import re
 import sys
+import glob
 import contextlib
 
 import torch
@@ -52,13 +54,39 @@ def _strip_module_prefix(state_dict):
     return state_dict
 
 
+def resolve_checkpoints(ckpt_dir):
+    """Find the E/G checkpoint pair in `ckpt_dir`, preferring best_ > latest_ > highest epoch_N.
+
+    Lets any checkpoint folder be loaded as-is -- the pretrained download ships
+    `latest_net_*`, while a fine-tuning run writes `best_net_*` / `epoch_N_net_*`.
+
+    Returns:
+        (e_path, g_path).
+    """
+    def pick(which):
+        cands = glob.glob(os.path.join(ckpt_dir, "*_net_%s.pth" % which))
+        if not cands:
+            raise FileNotFoundError(
+                "no *_net_%s.pth in %s\n"
+                "Download the PIC weights into this folder -- see the 'Model Weights' "
+                "section of the root README." % (which, ckpt_dir)
+            )
+
+        def rank(p):
+            b = os.path.basename(p)
+            if b.startswith("best_"):
+                return (3, 0)
+            if b.startswith("latest_"):
+                return (2, 0)
+            m = re.match(r"epoch_(\d+)_", b)
+            return (1, int(m.group(1))) if m else (0, 0)
+
+        return max(cands, key=rank)
+
+    return pick("E"), pick("G")
+
+
 def _load_net(net, path, device):
-    if not os.path.isfile(path):
-        raise FileNotFoundError(
-            "PIC checkpoint not found: %s\n"
-            "Download the 'Imagenet_random' model from the PIC README (Google Drive) "
-            "and place latest_net_E.pth / latest_net_G.pth under the checkpoints dir." % path
-        )
     state_dict = torch.load(path, map_location=device)
     state_dict = _strip_module_prefix(state_dict)
     net.load_state_dict(state_dict)  # strict: architecture is reproduced exactly
@@ -66,10 +94,11 @@ def _load_net(net, path, device):
 
 
 def get_pic_inpainter(ckpt_dir, device=None):
-    """Build net_E + net_G and load pretrained weights.
+    """Build net_E + net_G and load weights.
 
     Args:
-        ckpt_dir: folder containing `latest_net_E.pth` and `latest_net_G.pth`.
+        ckpt_dir: folder containing an E/G checkpoint pair; see `resolve_checkpoints`
+                  for which one is picked when several are present.
         device:   torch.device; defaults to cuda-if-available-else-cpu.
     Returns:
         (net_E, net_G) in eval mode on `device`.
@@ -89,8 +118,9 @@ def get_pic_inpainter(ckpt_dir, device=None):
             init_type="orthogonal", gpu_ids=[],
         )
 
-    _load_net(net_E, os.path.join(ckpt_dir, "latest_net_E.pth"), device)
-    _load_net(net_G, os.path.join(ckpt_dir, "latest_net_G.pth"), device)
+    e_path, g_path = resolve_checkpoints(ckpt_dir)
+    _load_net(net_E, e_path, device)
+    _load_net(net_G, g_path, device)
     net_E.to(device).eval()
     net_G.to(device).eval()
     return net_E, net_G
@@ -148,7 +178,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="PIC inference shape smoke test")
     parser.add_argument("--ckpt_dir", type=str, default=None,
-                        help="folder with latest_net_E.pth / latest_net_G.pth")
+                        help="folder with an E/G checkpoint pair (*_net_E.pth / *_net_G.pth)")
     parser.add_argument("--sample_num", type=int, default=2)
     args = parser.parse_args()
 

@@ -7,7 +7,7 @@ Bundle layout (what the notebook expects at its working directory):
     pic_inference.py
     pic_finetune_core.py
     pic_repo/model/*.py, pic_repo/util/*.py   (PIC architecture; imported as `model`/`util`)
-    checkpoints/imagenet_random/latest_net_{E,G}.pth
+    checkpoints/pretrained/latest_net_{E,G}.pth
     data_128x128/*.jpg                         (8,189 flowers, 128x128)
 
 Run:  python pic_finetuning/build_bundle.py
@@ -20,8 +20,8 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.abspath(os.path.join(HERE, ".."))
 
-DATA_SRC = os.path.join(REPO, "GAN_implementation", "data_128x128")
-CKPT_SRC = os.path.join(REPO, "pic_inpainting", "checkpoints", "imagenet_random")
+DATA_SRC = os.path.join(REPO, "data_128x128")
+CKPT_SRC = os.path.join(REPO, "pic_inpainting", "checkpoints", "pretrained")
 PIC_REPO = os.path.join(REPO, "pic_inpainting", "pic_repo")
 
 STAGE = os.path.join(HERE, "_bundle_stage")
@@ -36,10 +36,10 @@ def _require(path, hint):
 
 
 def main():
-    _require(DATA_SRC, "Regenerate via GAN_implementation/download_data.py + resize_images.py")
+    _require(DATA_SRC, "Regenerate via `python prepare_data.py` from the repo root")
     for name in ["latest_net_E.pth", "latest_net_G.pth"]:
         _require(os.path.join(CKPT_SRC, name),
-                 "Download the PIC 'Imagenet_random' weights (see pic_inpainting/README.md)")
+                 "Download the pretrained PIC weights (see 'Model Weights' in the root README)")
 
     if os.path.isdir(STAGE):
         shutil.rmtree(STAGE)
@@ -57,7 +57,7 @@ def main():
                     os.path.join(STAGE, "pic_repo", "util"), ignore=_ignore_pyc)
 
     # --- pretrained weights ---
-    dst_ckpt = os.path.join(STAGE, "checkpoints", "imagenet_random")
+    dst_ckpt = os.path.join(STAGE, "checkpoints", "pretrained")
     os.makedirs(dst_ckpt)
     for name in ["latest_net_E.pth", "latest_net_G.pth"]:
         shutil.copy(os.path.join(CKPT_SRC, name), dst_ckpt)

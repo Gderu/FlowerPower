@@ -126,7 +126,7 @@ python pic_inpainting/evaluate_pic.py --num_images 4 --sample_num 3
 
 ### Run the fine-tuned model (and compare it to the pretrained one)
 ```bash
-python pic_finetuning/run_finetuned.py
+python pic_inpainting/finetuning/run_finetuned.py
 ```
 - Loads both `checkpoints/pretrained/` and `checkpoints/finetuned/` and runs them on the same
   images with the same masks.
@@ -141,15 +141,15 @@ python pic_inpainting/evaluate_pic.py --ckpt_dir pic_inpainting/checkpoints/fine
 ### Fine-tune it yourself (optional)
 Fine-tuning runs in Google Colab on a GPU, not locally.
 ```bash
-python pic_finetuning/build_bundle.py
+python pic_inpainting/finetuning/build_bundle.py
 ```
-- Produces `pic_finetuning/pic_finetune_bundle.zip` (~60MB: code, pretrained weights, dataset).
-- Upload it to Colab, open `pic_finetuning/pic_finetune.ipynb`, set the runtime to **GPU**, and
+- Produces `pic_inpainting/finetuning/pic_finetune_bundle.zip` (~60MB: code, pretrained weights, dataset).
+- Upload it to Colab, open `pic_inpainting/finetuning/pic_finetune.ipynb`, set the runtime to **GPU**, and
   run all cells. Weights land in `checkpoints/finetuned/`; download them back into
   `pic_inpainting/checkpoints/finetuned/`.
 
 See [`pic_inpainting/README.md`](pic_inpainting/README.md) and
-[`pic_finetuning/README.md`](pic_finetuning/README.md) for details.
+[`pic_inpainting/finetuning/README.md`](pic_inpainting/finetuning/README.md) for details.
 
 ## 6. Unified Evaluation & Visualizations
 
@@ -191,8 +191,8 @@ FlowerPower/
 │   ├── checkpoints/         # PIC weights (downloaded, see Model Weights)
 │   │   ├── pretrained/      # Original PIC weights ("PIN - pretrained")
 │   │   └── finetuned/       # Fine-tuned on flowers ("PIN - finetuned")
-│   └── pic_repo/            # Official PIC codebase (vendored)
-├── pic_finetuning/          # Approach C: PIC fine-tuning code (Colab notebook + bundle)
+│   ├── pic_repo/            # Official PIC codebase (vendored)
+│   └── finetuning/          # PIC fine-tuning code (Colab notebook + bundle)
 ├── prepare_data.py          # Downloads and resizes the flowers dataset
 ├── shared_utils.py          # Shared dataset, discriminator, and loss logic
 └── README.md

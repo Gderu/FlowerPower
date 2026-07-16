@@ -21,7 +21,7 @@ Feed-forward ⇒ CPU-practical: ~**0.13 s per 256×256 completion** on this CPU-
   under numpy 2.x).
 - `checkpoints/` — weights go here (git-ignored via `*.pth`):
   - `pretrained/` — the original PIC ImageNet weights (`latest_net_{E,G}.pth`).
-  - `finetuned/` — fine-tuned on flowers by `pic_finetuning/` (see that folder's README).
+  - `finetuned/` — fine-tuned on flowers by `finetuning/` (see that folder's README).
 
 ## Get the weights
 Download them from the shared weights directory — see **Model Weights** in the
@@ -59,5 +59,5 @@ python pic_inpainting/evaluate_pic.py --data_dir pic_inpainting/pic_repo/dataset
 ## Status
 Integration **validated end-to-end on CPU** with the real ImageNet weights: correct
 composition/mask polarity, working diversity, ~0.1 s/completion. The fine-tuned weights from
-`pic_finetuning/` load through the same path and improve hole-L1 / PSNR over the pretrained
+`finetuning/` load through the same path and improve hole-L1 / PSNR over the pretrained
 model — see `evaluations/pic_finetuning/`.

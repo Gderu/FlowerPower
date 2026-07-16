@@ -3,9 +3,9 @@ model. Loads whatever checkpoint currently lives in the fine-tuned folder (defau
 `pic_inpainting/checkpoints/finetuned/`), picking best_ > latest_ > highest epoch_N.
 
 Usage (from the repo root):
-    python pic_finetuning/run_finetuned.py
-    python pic_finetuning/run_finetuned.py --num_images 6 --sample_num 4 --seed 7
-    python pic_finetuning/run_finetuned.py --finetuned_dir <folder with *_net_E.pth / *_net_G.pth>
+    python pic_inpainting/finetuning/run_finetuned.py
+    python pic_inpainting/finetuning/run_finetuned.py --num_images 6 --sample_num 4 --seed 7
+    python pic_inpainting/finetuning/run_finetuned.py --finetuned_dir <folder with *_net_E.pth / *_net_G.pth>
 
 Writes side-by-side grids to evaluations/pic_finetuning/ and prints hole-L1 / PSNR.
 """
@@ -15,10 +15,10 @@ import sys
 import random
 import argparse
 
-REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 for p in [REPO, os.path.join(REPO, "pic_inpainting"),
           os.path.join(REPO, "pic_inpainting", "pic_repo"),
-          os.path.join(REPO, "pic_finetuning")]:
+          os.path.join(REPO, "pic_inpainting", "finetuning")]:
     if p not in sys.path:
         sys.path.insert(0, p)
 

@@ -10,7 +10,7 @@ Bundle layout (what the notebook expects at its working directory):
     checkpoints/pretrained/latest_net_{E,G}.pth
     data_128x128/*.jpg                         (8,189 flowers, 128x128)
 
-Run:  python pic_finetuning/build_bundle.py
+Run:  python pic_inpainting/finetuning/build_bundle.py
 """
 
 import os
@@ -18,7 +18,7 @@ import shutil
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-REPO = os.path.abspath(os.path.join(HERE, ".."))
+REPO = os.path.abspath(os.path.join(HERE, "..", ".."))
 
 DATA_SRC = os.path.join(REPO, "data_128x128")
 CKPT_SRC = os.path.join(REPO, "pic_inpainting", "checkpoints", "pretrained")

@@ -24,9 +24,9 @@ wrapper's forward pass.
 
 1. **Build the bundle** (from the repo root):
    ```bash
-   python pic_finetuning/build_bundle.py
+   python pic_inpainting/finetuning/build_bundle.py
    ```
-   Produces `pic_finetuning/pic_finetune_bundle.zip` (~60 MB: code, the pretrained
+   Produces `pic_inpainting/finetuning/pic_finetune_bundle.zip` (~60 MB: code, the pretrained
    `latest_net_{E,G}.pth`, and all 8,189 flower images).
 
 2. **Fine-tune in Colab:** open `pic_finetune.ipynb`, set the runtime to **GPU**, upload the
@@ -52,7 +52,7 @@ wrapper's forward pass.
    there (`best_` > `latest_` > highest `epoch_N`), so no renaming is needed:
    ```bash
    # fine-tuned vs. pretrained, with a hole-L1 / PSNR table
-   python pic_finetuning/run_finetuned.py
+   python pic_inpainting/finetuning/run_finetuned.py
 
    # or through the standalone evaluator
    python pic_inpainting/evaluate_pic.py --ckpt_dir pic_inpainting/checkpoints/finetuned

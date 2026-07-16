@@ -4,3 +4,8 @@ Pillow
 matplotlib
 pytorch-lightning
 kornia
+tqdm
+torchmetrics[image]
+torch-fidelity
+imageio
+scipy

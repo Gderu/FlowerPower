@@ -16,15 +16,26 @@ def evaluate(checkpoint_path=None, num_images=4):
     
     # Find latest checkpoint if none specified
     if checkpoint_path is None:
-        checkpoints = glob.glob("checkpoints/gan/netG_epoch_*.pth")
-        if not checkpoints:
-            print("No generator checkpoints found!")
-            return
-        # Sort by epoch number
-        def get_epoch(x):
-            return int(os.path.basename(x).split('_')[-1].split('.')[0])
-        checkpoints.sort(key=get_epoch)
-        checkpoint_path = checkpoints[-1]
+        default_path = "checkpoints/gan/UNet_GAN_generator.pth"
+        if os.path.exists(default_path):
+            checkpoint_path = default_path
+        else:
+            checkpoints = glob.glob("checkpoints/gan/netG_epoch_*.pth")
+            if not checkpoints:
+                print("No generator checkpoints found!")
+                return
+            # Sort by epoch number
+            def get_epoch(x):
+                filename = os.path.basename(x)
+                # e.g., netG_epoch_99(1).pth -> '99(1)' -> extract just digits
+                epoch_str = filename.split('_')[-1].split('.')[0]
+                # remove any non-digit chars like '(1)'
+                import re
+                digits = re.sub(r'\D', '', epoch_str)
+                return int(digits) if digits else -1
+                
+            checkpoints.sort(key=get_epoch)
+            checkpoint_path = checkpoints[-1]
         
     print(f"Evaluating with checkpoint: {checkpoint_path}")
 
@@ -87,4 +98,11 @@ def evaluate(checkpoint_path=None, num_images=4):
     plt.show()
 
 if __name__ == "__main__":
-    evaluate(num_images=5)
+    import argparse
+    parser = argparse.ArgumentParser(description="Evaluate GAN on flower images")
+    parser.add_argument("--checkpoint", type=str, default=None, 
+                        help="Path to generator checkpoint (defaults to UNet_GAN_generator.pth in checkpoints/gan/)")
+    parser.add_argument("--num_images", type=int, default=5, help="Number of images to evaluate")
+    args = parser.parse_args()
+    
+    evaluate(checkpoint_path=args.checkpoint, num_images=args.num_images)

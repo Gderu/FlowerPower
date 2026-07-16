@@ -14,7 +14,7 @@ def setup_lama():
     
     lama_repo_dir = os.path.join(script_dir, 'lama_repo')
     weights_dir = os.path.join(project_root, 'checkpoints', 'big-lama', 'models')
-    weights_path = os.path.join(weights_dir, 'best.ckpt')
+    weights_path = os.path.join(weights_dir, 'LaMa_base_generator.ckpt')
     
     # Step 1: Clone LaMa repo
     if os.path.exists(os.path.join(lama_repo_dir, 'saicinpainting')):
@@ -44,10 +44,15 @@ def setup_lama():
         # Clean up zip
         os.remove(zip_path)
         
+        # Rename best.ckpt to LaMa_base_generator.ckpt
+        old_weights_path = os.path.join(weights_dir, 'best.ckpt')
+        if os.path.exists(old_weights_path):
+            os.rename(old_weights_path, weights_path)
+        
         if os.path.exists(weights_path):
             print(f"Pretrained weights extracted to {weights_path}")
         else:
-            print("WARNING: Extraction finished but best.ckpt not found at expected path.")
+            print("WARNING: Extraction finished but LaMa_base_generator.ckpt not found at expected path.")
             print(f"Expected: {weights_path}")
             print("You may need to manually locate the checkpoint file.")
 

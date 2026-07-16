@@ -39,6 +39,8 @@ files and place them in the matching directory (create it if it doesn't exist):
 
 | Weights subfolder | Copy its `.pth` files to |
 |---|---|
+| `GAN` | `checkpoints/gan/` |
+| `LaMa - finetuned` | `checkpoints/lama/` |
 | `PIN - pretrained` | `pic_inpainting/checkpoints/pretrained/` |
 | `PIN - finetuned`  | `pic_inpainting/checkpoints/finetuned/` |
 
@@ -70,6 +72,7 @@ python GAN_implementation/main.py
 python GAN_implementation/evaluate.py
 ```
 - This will automatically load the latest checkpoint from `checkpoints/gan/`.
+- To evaluate a specific checkpoint, use the `--checkpoint` flag (e.g., `python GAN_implementation/evaluate.py --checkpoint path/to/model.pth`).
 - Evaluation samples will be saved to `evaluations/gan/`.
 
 ---
@@ -95,6 +98,7 @@ python lama_finetuning/fine_tune_lama.py
 python lama_finetuning/evaluate_lama.py
 ```
 - This will automatically load the latest fine-tuned checkpoint from `checkpoints/lama/`.
+- To evaluate a specific checkpoint, use the `--checkpoint` flag (e.g., `python lama_finetuning/evaluate_lama.py --checkpoint path/to/model.pth`).
 - Evaluation samples will be saved to `evaluations/lama/`.
 
 ---
@@ -146,6 +150,23 @@ python pic_finetuning/build_bundle.py
 
 See [`pic_inpainting/README.md`](pic_inpainting/README.md) and
 [`pic_finetuning/README.md`](pic_finetuning/README.md) for details.
+
+## 6. Unified Evaluation & Visualizations
+
+If you have downloaded all model weights, you can evaluate and visualize all models simultaneously:
+
+### Quantitative Evaluation
+Calculates PSNR, SSIM, and FID for all models on the dataset:
+```bash
+python evaluations/evaluate_models.py
+```
+*(By default, this evaluates the entire dataset. You can limit it with `--num_images 100` if you edit the script, or just let it run).*
+
+### Qualitative Visualization
+Generates a side-by-side comparison grid (`Real | Masked | GAN | Base LaMa | FT LaMa | Base PIC | FT PIC`) and saves it to `evaluations/results/inpainting_examples.png`:
+```bash
+python evaluations/visualize_models.py
+```
 
 ---
 

@@ -17,21 +17,25 @@ def evaluate_lama(checkpoint_path=None, num_images=4):
     
     # Find latest checkpoint if none specified
     if checkpoint_path is None:
-        checkpoints = glob.glob("checkpoints/lama/lama_netG_epoch_*.pth")
-        if not checkpoints:
-            print("No generator checkpoints found!")
-            return
-        
-        # Sort by epoch number
-        def get_epoch(x):
-            filename = os.path.basename(x)
-            try:
-                return int(filename.split('_')[-1].split('.')[0])
-            except ValueError:
-                return -1
+        default_path = "checkpoints/lama/lama_finetuned_generator.pth"
+        if os.path.exists(default_path):
+            checkpoint_path = default_path
+        else:
+            checkpoints = glob.glob("checkpoints/lama/lama_netG_epoch_*.pth")
+            if not checkpoints:
+                print("No generator checkpoints found!")
+                return
+            
+            # Sort by epoch number
+            def get_epoch(x):
+                filename = os.path.basename(x)
+                epoch_str = filename.split('_')[-1].split('.')[0]
+                import re
+                digits = re.sub(r'\D', '', epoch_str)
+                return int(digits) if digits else -1
                 
-        checkpoints.sort(key=get_epoch)
-        checkpoint_path = checkpoints[-1]
+            checkpoints.sort(key=get_epoch)
+            checkpoint_path = checkpoints[-1]
         
     print(f"Evaluating with checkpoint: {checkpoint_path}")
 
@@ -91,4 +95,11 @@ def evaluate_lama(checkpoint_path=None, num_images=4):
     plt.show()
 
 if __name__ == "__main__":
-    evaluate_lama(num_images=5)
+    import argparse
+    parser = argparse.ArgumentParser(description="Evaluate Fine-tuned LaMa on flower images")
+    parser.add_argument("--checkpoint", type=str, default=None, 
+                        help="Path to generator checkpoint (defaults to lama_finetuned_generator.pth in checkpoints/lama/)")
+    parser.add_argument("--num_images", type=int, default=5, help="Number of images to evaluate")
+    args = parser.parse_args()
+    
+    evaluate_lama(checkpoint_path=args.checkpoint, num_images=args.num_images)

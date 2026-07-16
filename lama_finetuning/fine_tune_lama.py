@@ -121,7 +121,7 @@ if __name__ == "__main__":
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=0)
 
     # Initialize Models
-    pretrained_weights_path = "checkpoints/big-lama/models/best.ckpt"
+    pretrained_weights_path = "checkpoints/big-lama/models/LaMa_base_generator.ckpt"
     
     netG = get_lama_generator(device, pretrained_path=pretrained_weights_path)
     netD = Discriminator(in_channels=3, features=64).to(device)

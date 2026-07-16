@@ -26,7 +26,7 @@ wrapper's forward pass.
    ```bash
    python pic_finetuning/build_bundle.py
    ```
-   Produces `pic_finetuning/pic_finetune_bundle.zip` (~80 MB: code, the pretrained
+   Produces `pic_finetuning/pic_finetune_bundle.zip` (~60 MB: code, the pretrained
    `latest_net_{E,G}.pth`, and all 8,189 flower images).
 
 2. **Fine-tune in Colab:** open `pic_finetune.ipynb`, set the runtime to **GPU**, upload the
@@ -42,17 +42,23 @@ wrapper's forward pass.
      `completed_epochs` and trains `EPOCHS_TO_RUN` more (history and epoch numbering are not
      reset).
    - *New session / after a disconnect* — set `RESUME = True` (and `RESUME_DIR` to the folder
-     holding your `epoch_N_net_{E,G}.pth`, default `checkpoints/flowers_finetuned`). The build
+     holding your `epoch_N_net_{E,G}.pth`, default `checkpoints/finetuned`). The build
      cell loads the highest epoch and continues from N+1; if a `train_state.pt` sits alongside,
      the optimizer moments and loss history are restored too (otherwise it resumes weights-only
      with a fresh optimizer).
 
-3. **Use the fine-tuned weights.** Download `checkpoints/flowers_finetuned/best_net_{E,G}.pth`
-   from Colab. To run them through the existing evaluator, place them in a folder as
-   `latest_net_{E,G}.pth` and point the evaluator at it:
+3. **Use the fine-tuned weights.** Download `checkpoints/finetuned/best_net_{E,G}.pth` from
+   Colab into `pic_inpainting/checkpoints/finetuned/`. The tooling resolves whichever pair is
+   there (`best_` > `latest_` > highest `epoch_N`), so no renaming is needed:
    ```bash
-   python pic_inpainting/evaluate_pic.py --ckpt_dir <that_folder>
+   # fine-tuned vs. pretrained, with a hole-L1 / PSNR table
+   python pic_finetuning/run_finetuned.py
+
+   # or through the standalone evaluator
+   python pic_inpainting/evaluate_pic.py --ckpt_dir pic_inpainting/checkpoints/finetuned
    ```
+   Already-published weights can be downloaded directly — see **Model Weights** in the
+   [root README](../README.md#2-model-weights) (`PIN - finetuned`).
 
 ## Notes
 

@@ -19,31 +19,31 @@ Feed-forward ⇒ CPU-practical: ~**0.13 s per 256×256 completion** on this CPU-
 - `evaluate_pic.py` — renders a `Real | Masked | Sample 1..K` figure to
   `evaluations/pic_inpainting/`. Uses torchvision/PIL (not matplotlib, which is broken here
   under numpy 2.x).
-- `checkpoints/` — pretrained weights go here (git-ignored via `*.pth`).
+- `checkpoints/` — weights go here (git-ignored via `*.pth`):
+  - `pretrained/` — the original PIC ImageNet weights (`latest_net_{E,G}.pth`).
+  - `finetuned/` — fine-tuned on flowers by `pic_finetuning/` (see that folder's README).
 
-## Get the pretrained weights (manual — Drive is rate-limiting `gdown`)
-`gdown` currently fails on these files ("Cannot retrieve the public link … many accesses").
-Download in a browser from the PIC README and place the files as below.
+## Get the weights
+Download them from the shared weights directory — see **Model Weights** in the
+[root README](../README.md#2-model-weights). The `PIN - pretrained` and `PIN - finetuned`
+subfolders map to `checkpoints/pretrained/` and `checkpoints/finetuned/` respectively
+("PIN" is that directory's label for PIC).
 
-**ImageNet, random-mask** (best domain + mask match for the flower dataset's large masks):
-<https://drive.google.com/open?id=1hS6D4gjOkvEOlAEOAKxCCzjhpCoddU2S>
+`get_pic_inpainter` resolves whichever E/G pair is in the folder (`best_` > `latest_` >
+highest `epoch_N`), so the files need no renaming. Only the encoder/generator are used;
+`*_net_D.pth` / `*_net_D_rec.pth` are not needed for inference.
 
-Place at least these two files here:
-```
-pic_inpainting/checkpoints/imagenet_random/latest_net_E.pth
-pic_inpainting/checkpoints/imagenet_random/latest_net_G.pth
-```
-(`latest_net_D.pth` / `latest_net_D_rec.pth` are not needed for inference.)
-If the download is a folder/zip with a different name, either rename it to
-`imagenet_random` or pass `--ckpt_dir <path>` to `evaluate_pic.py`.
-
-Other options from the PIC README: `Places2_random`, `CelebA_random`, or the `*_center`
-variants; the Baidu mirror; or retry `gdown <id>` after the Drive quota resets (~24 h).
+The ImageNet, random-mask variant is the best domain + mask match for the flower dataset's
+large masks. Other variants from the [upstream PIC README](https://github.com/lyndonzheng/Pluralistic-Inpainting)
+(`Places2_random`, `CelebA_random`, the `*_center` variants) also load — pass `--ckpt_dir <path>`.
 
 ## Run
 ```bash
-# real flowers (regenerate data_128x128 via GAN_implementation/{download_data,resize_images}.py if absent)
+# pretrained, on real flowers (run `python prepare_data.py` from the repo root if data_128x128/ is absent)
 python pic_inpainting/evaluate_pic.py --num_images 4 --sample_num 3
+
+# the fine-tuned weights (or any other checkpoint folder)
+python pic_inpainting/evaluate_pic.py --ckpt_dir pic_inpainting/checkpoints/finetuned
 
 # quick pipeline smoke test on the bundled sample images (any folder works; images are resized to 128)
 python pic_inpainting/evaluate_pic.py --data_dir pic_inpainting/pic_repo/datasets/imagenet --num_images 3 --sample_num 3
@@ -57,6 +57,7 @@ python pic_inpainting/evaluate_pic.py --data_dir pic_inpainting/pic_repo/dataset
 - **Diversity.** `--sample_num K` draws K independent `z` (unseeded) → K different fills.
 
 ## Status
-Integration written and **validated end-to-end on CPU** (runs, correct composition/mask polarity,
-working diversity, ~0.13 s/completion) using random stand-in weights. Swap in the real ImageNet
-weights above to get meaningful flower completions — no code changes needed.
+Integration **validated end-to-end on CPU** with the real ImageNet weights: correct
+composition/mask polarity, working diversity, ~0.1 s/completion. The fine-tuned weights from
+`pic_finetuning/` load through the same path and improve hole-L1 / PSNR over the pretrained
+model — see `evaluations/pic_finetuning/`.

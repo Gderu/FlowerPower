@@ -1,21 +1,17 @@
 """Run the fine-tuned PIC model on flower images and compare it to the pretrained ImageNet
 model. Loads whatever checkpoint currently lives in the fine-tuned folder (default
-`pic_inpainting/checkpoints/flowers_finetuned_best/`), picking best_ > latest_ > highest epoch_N.
+`pic_inpainting/checkpoints/finetuned/`), picking best_ > latest_ > highest epoch_N.
 
 Usage (from the repo root):
     python pic_finetuning/run_finetuned.py
     python pic_finetuning/run_finetuned.py --num_images 6 --sample_num 4 --seed 7
-    python pic_finetuning/run_finetuned.py --finetuned_dir pic_inpainting/checkpoints/flowers_finetuned
+    python pic_finetuning/run_finetuned.py --finetuned_dir <folder with *_net_E.pth / *_net_G.pth>
 
 Writes side-by-side grids to evaluations/pic_finetuning/ and prints hole-L1 / PSNR.
 """
 
 import os
 import sys
-import glob
-import re
-import shutil
-import tempfile
 import random
 import argparse
 
@@ -31,43 +27,16 @@ import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 
 from shared_utils import ImageDataset, get_large_random_mask
-from pic_inference import get_pic_inpainter, pic_inpaint
+from pic_inference import get_pic_inpainter, pic_inpaint, resolve_checkpoints
 from evaluate_pic import make_figure
 import pic_finetune_core as core
 
 
-def _pick(dirpath, which):
-    """Pick the {which}=E/G checkpoint: best_ > latest_ > highest epoch_N."""
-    cands = glob.glob(os.path.join(dirpath, f"*_net_{which}.pth"))
-    if not cands:
-        raise FileNotFoundError(f"no *_net_{which}.pth in {dirpath}")
-
-    def rank(p):
-        b = os.path.basename(p)
-        if b.startswith("best_"):
-            return (3, 0)
-        if b.startswith("latest_"):
-            return (2, 0)
-        m = re.match(r"epoch_(\d+)_", b)
-        return (1, int(m.group(1))) if m else (0, 0)
-
-    return max(cands, key=rank)
-
-
-def load_finetuned(dirpath, device):
-    e_path, g_path = _pick(dirpath, "E"), _pick(dirpath, "G")
-    print(f"fine-tuned checkpoint: {os.path.basename(e_path)} / {os.path.basename(g_path)}")
-    tmp = tempfile.mkdtemp()
-    shutil.copy(e_path, os.path.join(tmp, "latest_net_E.pth"))
-    shutil.copy(g_path, os.path.join(tmp, "latest_net_G.pth"))
-    return get_pic_inpainter(tmp, device)
-
-
 def main():
     ap = argparse.ArgumentParser(description="Run + compare the fine-tuned PIC model")
-    ap.add_argument("--finetuned_dir", default=os.path.join(REPO, "pic_inpainting", "checkpoints", "flowers_finetuned_best"))
-    ap.add_argument("--pretrained_dir", default=os.path.join(REPO, "pic_inpainting", "checkpoints", "imagenet_random"))
-    ap.add_argument("--data_dir", default=os.path.join(REPO, "GAN_implementation", "data_128x128"))
+    ap.add_argument("--finetuned_dir", default=os.path.join(REPO, "pic_inpainting", "checkpoints", "finetuned"))
+    ap.add_argument("--pretrained_dir", default=os.path.join(REPO, "pic_inpainting", "checkpoints", "pretrained"))
+    ap.add_argument("--data_dir", default=os.path.join(REPO, "data_128x128"))
     ap.add_argument("--out_dir", default=os.path.join(REPO, "evaluations", "pic_finetuning"))
     ap.add_argument("--num_images", type=int, default=4)
     ap.add_argument("--sample_num", type=int, default=3)
@@ -88,7 +57,10 @@ def main():
     print("loading pretrained (ImageNet) ...")
     pre_E, pre_G = get_pic_inpainter(args.pretrained_dir, device)
     print("loading fine-tuned (flowers) ...")
-    ft_E, ft_G = load_finetuned(args.finetuned_dir, device)
+    ft_e_path, ft_g_path = resolve_checkpoints(args.finetuned_dir)
+    print("fine-tuned checkpoint: %s / %s"
+          % (os.path.basename(ft_e_path), os.path.basename(ft_g_path)))
+    ft_E, ft_G = get_pic_inpainter(args.finetuned_dir, device)
 
     def comps(E, G):
         fills = pic_inpaint(E, G, reals, masks, sample_num=args.sample_num, device=device)
